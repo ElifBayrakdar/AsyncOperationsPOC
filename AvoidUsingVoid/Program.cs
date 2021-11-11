@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace AvoidUsingVoid
@@ -7,51 +8,23 @@ namespace AvoidUsingVoid
     {
         static async Task Main(string[] args)
         {
-            Console.WriteLine("start");
-            
-            
-            /* --1--
-             * ThrowException();
-             */
-            
-            /* --2--
             try
             {
-                 VoidFuncAsync();
+                 await ReadAllLines("myfile.txt");
             }
-            catch (Exception ex)
+            catch (FileNotFoundException e)
             {
-                Console.WriteLine(ex);
+                Console.WriteLine("file not found");
             }
-            */
-            
-            /* --3--
-            try
+            catch (Exception e)
             {
-                 await TaskFuncAsync();
+                Console.WriteLine("exception");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-            */
             Console.WriteLine("end");
-            Console.ReadKey();
         }
-        
-        public static async Task ThrowException()
+        private static async Task ReadAllLines(string filePath)
         {
-            throw new Exception();
-        }
-
-        public static async void VoidFuncAsync()
-        {
-            await ThrowException();
-        }
-
-        public static async Task TaskFuncAsync()
-        {
-            await ThrowException();
+            await File.ReadAllLinesAsync(filePath);
         }
     }
 }
