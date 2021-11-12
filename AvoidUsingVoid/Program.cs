@@ -10,7 +10,7 @@ namespace AvoidUsingVoid
         {
             try
             {
-                 await ReadAllLines("myfile.txt");
+                ReadAllLines("myfile.txt");
             }
             catch (FileNotFoundException e)
             {
@@ -20,9 +20,12 @@ namespace AvoidUsingVoid
             {
                 Console.WriteLine("exception");
             }
-            Console.WriteLine("end");
+
+            var input = Console.ReadLine();
+            Console.WriteLine(input);
         }
-        private static async Task ReadAllLines(string filePath)
+
+        private static async void ReadAllLines(string filePath)
         {
             await File.ReadAllLinesAsync(filePath);
         }

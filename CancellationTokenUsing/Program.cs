@@ -9,17 +9,16 @@ namespace CancellationTokenUsing
     {
         static async Task Main(string[] args)
         {
-            await ExecuteCancellableTaskByTimeoutAsync();
-            //await ExecuteManuallyCancellableTaskAsync();
+            //await ExecuteCancellableTaskByTimeoutAsync();
+            await ExecuteManuallyCancellableTaskAsync();
         }
 
-        
         private static async Task<string> DoCancellableWork(CancellationToken token)
         {
             Task<string> taskResult;
             try
             {
-                taskResult = new HttpClient().GetStringAsync("https://www.google.com");
+                taskResult = new HttpClient().GetStringAsync("https://www.google.com", token);
                 string result = await taskResult;
 
                 await Task.Delay(5000, token);
@@ -51,10 +50,11 @@ namespace CancellationTokenUsing
         
         
         
-
+        
+        
+        
 
         //Manually Cancelling
-
         private static async Task<int> DoCancellableWork(int loop, CancellationToken cancellationToken)
         {
             int result = 0;

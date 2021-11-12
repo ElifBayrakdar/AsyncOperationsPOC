@@ -10,27 +10,27 @@ namespace AsyncOperationsPOC
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hello World!");
+            await GetStringAsync3();
+            Console.ReadKey();
         }
         
         private static async Task<string> GetStringAsync()
         {
-            var response = new HttpClient().GetStringAsync("https://www.google.com");
-
-            var result = await response;
+            var task = new HttpClient().GetStringAsync("https://www.google.com");
+            
+            var result = await task;
 
             return result;
         }
 
-
-        private static Task<string> GetStringAsync2()   // bu konudaki thread switch konusuna bakılacak
+        private static Task<string> GetStringAsync2()  //Context switch
         {
             return new HttpClient().GetStringAsync("https://www.google.com");
         }
         
-        
-        private static async Task GetStringAsync3()  
+        private static async Task GetStringAsync3()
         {
-            var response =  new HttpClient().GetStringAsync("https://www.google.com").ContinueWith((data) =>
+            var response = new HttpClient().GetStringAsync("https://www.google.com").ContinueWith((data) =>
             {
                 Console.WriteLine($"Data is: {data.Result}");
             });
@@ -38,60 +38,111 @@ namespace AsyncOperationsPOC
             await response;
         }
         
+        private static string GetStringAsync4()
+        {
+            return new HttpClient().GetStringAsync("https://www.google.com").Result;
+        }
         
-        private static async Task<string[]> GetStringsWithWhenAllAsync()  
+        private static Task<string> DoSomethingAsync()
+        {
+            using (var foo = new DisposableFoo())
+            {
+                return foo.GetFooStringAsync();
+            }
+        }
+
+        private static async Task<string> DoSomethingAsync2()
+        {
+            using (var foo = new DisposableFoo())
+            {
+                return await foo.GetFooStringAsync();
+            }
+        }
+
+        private static async Task<string[]> GetStringsWithWhenAllAsync()
         {
             var task1 = new HttpClient().GetStringAsync("https://www.google.com");
             var task2 = new HttpClient().GetStringAsync("https://www.yandex.com");
 
-            List<Task<string>> tasks = new List<Task<string>>();
-            tasks.Add(task1);
-            tasks.Add(task2);
+            var result = await Task.WhenAll(task1, task2); //Tüm taskların sonucunu geri döndürür.
 
-            var result = await Task.WhenAll(tasks.ToArray());   //Tüm taskların sonucunu geri döndürdü.
             return result;
         }
-        
-        
-        private static async Task<string> GetStringsWithWhenAnyAsync()  
+
+
+        private static async Task<string> GetStringsWithWhenAnyAsync()
         {
             var task1 = new HttpClient().GetStringAsync("https://www.google.com");
             var task2 = new HttpClient().GetStringAsync("https://www.yandex.com");
 
-            List<Task<string>> tasks = new List<Task<string>>();
-            tasks.Add(task1);
-            tasks.Add(task2);
-
-            var result = await Task.WhenAny(tasks.ToArray());
-            return result.Result;   //İlk biten taskın sonucuna Result ile güvenle ulaşabiliriz.
+            var firstRsult = await Task.WhenAny(task1, task2);
+            
+            return await firstRsult; 
+                                     //Diğer tasklar çalışmaya devam eder ama sonuçları ignore edilir.
+                                     //Diğer tasklar exception alırlarsa exception'lar ignore edilir.
         }
-        
-        
-        private static void GetStringsWithWaitAllAsync()  
+
+
+        private static string GetStringsWithWaitAllAsync()
         {
             var task1 = new HttpClient().GetStringAsync("https://www.google.com");
             var task2 = new HttpClient().GetStringAsync("https://www.yandex.com");
 
-            List<Task> tasks = new List<Task>();
-            tasks.Add(task1);
-            tasks.Add(task2);
-
-            Task.WaitAll(tasks.ToArray());    //Ana thread bloklanır, kod senkron çalışır.
+            Task.WaitAll(task1, task2); //Ana thread bloklanır, kod senkron çalışır.
+            return task1.IsCompleted.ToString();
         }
-        
-        
-        private static int GetStringsWithWaitAnyAsync()  
+
+
+        private static int GetStringsWithWaitAnyAsync()
         {
             var task1 = new HttpClient().GetStringAsync("https://www.google.com");
             var task2 = new HttpClient().GetStringAsync("https://www.yandex.com");
-
-            List<Task> tasks = new List<Task>();
-            tasks.Add(task1);
-            tasks.Add(task2);
-
-            var result = Task.WaitAny(tasks.ToArray());     //Ana thread bloklanır, kod senkron çalışır. İlk biten taskın index numarası döner.
+            
+            var result = Task.WaitAny(task1, task2); //Ana thread bloklanır, kod senkron çalışır. İlk biten taskın index numarası döner.
 
             return result;
         }
     }
-}  
+
+    internal class DisposableFoo : IDisposable
+    {
+        private bool isDisposed = false;
+        
+        private SampleObject _sampleObject;
+
+        public DisposableFoo()
+        {
+            _sampleObject = new SampleObject();
+            Dispose(false);
+        }
+        
+        public async Task<string> GetFooStringAsync()
+        {
+            await Task.Delay(4000);
+            int sampleProp = _sampleObject.SampleProp;
+            return await Task.FromResult(sampleProp.ToString());
+        }
+
+        protected void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _sampleObject = null;
+            }
+            isDisposed = true;
+        }
+
+        public void Dispose()
+        {
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+        }
+    }
+
+    internal class SampleObject
+    {
+        public int SampleProp { get; set; }
+    }
+}
